@@ -1,0 +1,17 @@
+{
+  "-o": {
+    "amazon": "https://www.amazon.de",
+    "yt": "https://www.youtube.de",
+    "digi": "https://www.digikey.de/en",
+    "mind": "https://www.mindfactory.de",
+    "gpt": "https://chat.openai.com",
+    "conj": "https://conjugator.reverso.net/conjugation-japanese.html",
+    "np": "notepad++",
+    "steam": "steam",
+    "music": "X:/user/media/music/",
+    "uni": "X:/user/documents/- Studium/",
+    "multiMC": "X:/user/data/games/MultiMC/MultiMC.exe",
+    "animes": "X:/user/documents/gesehen animes reworked.txt",
+    "env": "cmd rundll32.exe sysdm.cpl,EditEnvironmentVariables"
+  }
+}
