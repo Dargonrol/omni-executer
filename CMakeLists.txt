@@ -12,15 +12,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 include_directories(${nlohmann_json_SOURCE_DIR}/single_include)
 
-add_executable(dragon main.cpp)
+add_executable(omex main.cpp)
 
 set(COPY_DESTINATION "$ENV{APPDATA}/Microsoft/Windows/Start Menu/Programs/dragon")
 
 add_custom_command(
-        TARGET dragon
+        TARGET omex
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${COPY_DESTINATION}"
         COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:dragon>
+            $<TARGET_FILE:omex>
             ${COPY_DESTINATION}
 )

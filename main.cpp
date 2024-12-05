@@ -108,6 +108,7 @@ namespace DragonUtils
         {
             DragonUtils::openArgs[key] = [value]()
             {
+                // TODO: implement support for arguments after first whitespace
                 DragonUtils::openWithDefaultApp(value.get<std::string>().c_str());
             };
         }
