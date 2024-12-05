@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 
+#define loadConfig if (parseConfig() != 0) { return; }
+
 namespace Utils
 {
     // Custom hash function for case-insensitive comparison
@@ -27,6 +29,33 @@ namespace Utils
             return lowercase_s1 == lowercase_s2;
         }
     };
+
+    template<typename T, typename  Hash = std::hash<std::string>, typename KeyEqual = std::equal_to<std::string>>
+    std::string getMapToChar(const std::unordered_map<std::string, T, Hash, KeyEqual>& map)
+    {
+        std::string result = " | ";
+        for (auto it = map.begin(); it != map.end(); ++it)
+        {
+            result.append(it->first + std::string(" | "));
+        }
+        return result;
+    }
+
+    std::vector<std::string> tokanizeStr(const std::string& str)
+    {
+        std::vector<std::string> tokens;
+        std::stringstream ss(str);
+        std::string token;
+
+        while (std::getline(ss, token, ' '))
+        {
+            if (!token.empty()) //if (!std::all_of(token.begin(), token.end(), [](unsigned char c) {return std::isspace(c);}))
+            {
+                tokens.push_back(token);
+            }
+        }
+        return tokens;
+    }
 }
 
 namespace DragonUtils
@@ -35,11 +64,15 @@ namespace DragonUtils
 
     enum ArgumentType
     {
-        OPEN
+        OPEN,
+        LIST
     };
 
-    std::unordered_map<std::string, DragonUtils::ArgumentType> arguments = {
-        {"-o", DragonUtils::ArgumentType::OPEN}
+    std::unordered_map<std::string, ArgumentType> arguments = {
+        {"-o", OPEN},
+        {"-open", OPEN},
+        {"--l", LIST},
+        {"--list", LIST}
     };
 
     std::unordered_map<std::string, std::function<void()>, Utils::CaseInsensitiveHash, Utils::CaseInsensitiveEqual> openArgs;
@@ -49,6 +82,7 @@ namespace DragonUtils
         switch (type)
         {
             case OPEN: return "OPEN";
+            case LIST: return "LIST";
             default: return "unknown type";
         }
     }
@@ -61,7 +95,7 @@ namespace DragonUtils
             file,
             params,
             nullptr,
-            SW_SHOW
+            SW_SHOWNOACTIVATE
         );
 
         if (reinterpret_cast<intptr_t>(result) <= 32)
@@ -106,10 +140,29 @@ namespace DragonUtils
         auto openMap = parsedJson["-o"];
         for (auto& [key, value]: openMap.items())
         {
-            DragonUtils::openArgs[key] = [value]()
+            openArgs[key] = [value]()
             {
-                // TODO: implement support for arguments after first whitespace
-                DragonUtils::openWithDefaultApp(value.get<std::string>().c_str());
+                std::vector<std::string> tokens = Utils::tokanizeStr(value.get<std::string>());
+
+                if (tokens.size() >= 2 && strcmp(tokens[0].c_str(), "cmd.exe") == 0)
+                {
+                    std::string params = [tokens]()
+                    {
+                        std::string rest;
+                        for (size_t i = 1; i < tokens.size(); ++i)
+                        {
+                            rest.append(tokens[i] + std::string(" "));
+                        }
+                        printf(rest.c_str());
+                        return rest;
+                    }();
+
+                    return openWithDefaultApp(
+                        tokens[0].c_str(),
+                        params.c_str()
+                        );
+                }
+                return openWithDefaultApp(value.get<std::string>().c_str());
             };
         }
 
@@ -117,7 +170,7 @@ namespace DragonUtils
         return 0;
     }
 
-    void openArg(int argc, char* argv[])
+    void openArg(const int& argc, const char* argv[])
     {
         if (argc <= 2)
         {
@@ -125,7 +178,7 @@ namespace DragonUtils
             return;
         }
 
-        if (parseConfig() != 0) { return; }
+        loadConfig
 
         for (int i = 2; i <= argc - 1; i++)
         {
@@ -140,7 +193,23 @@ namespace DragonUtils
         }
     }
 
-    void executeArgument(ArgumentType type, int argc, char* argv[])
+    void listArg(const int& argc, const char* argv[])
+    {
+        if (argc <= 2) { std::cout << "Insuffient argumemtes! Usage: omex --list [arg (e.g. -o)]" << std::endl; return; }
+
+        loadConfig
+
+        if (std::strcmp(argv[2], "-o") == 0 || std::strcmp(argv[2], "-open") == 0)
+        {
+            std::cout << "List of all things to \"open\": " << Utils::getMapToChar(openArgs) << std::endl;
+            return;
+        }
+
+        std::cerr << argv[2] << " does not exist!" << std::endl;
+
+    }
+
+    void consumeArgument(const ArgumentType type, const int& argc, const char* argv[])
     {
         switch (type)
         {
@@ -149,11 +218,16 @@ namespace DragonUtils
                 openArg(argc, argv);
                 break;
             }
+            case LIST:
+            {
+                listArg(argc, argv);
+                break;
+            }
         }
     }
 }
 
-int main(int argc, char *argv[])
+int main(const int argc, const char *argv[])
 {
     if (argc <= 1)
     {
@@ -164,7 +238,7 @@ int main(int argc, char *argv[])
     auto it = DragonUtils::arguments.find(argv[1]);
     if (it != DragonUtils::arguments.end())
     {
-        DragonUtils::executeArgument(it->second, argc, argv);
+        consumeArgument(it->second, argc, argv);
     } else
     {
         std::cout << "Unknown command: " << argv[1] << std::endl;
